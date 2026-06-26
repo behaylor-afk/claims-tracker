@@ -1372,6 +1372,7 @@ function renderOps() {
 }
 
 function exportOps() {
+  // Build data
   let allRows = Object.entries(patients).map(([key,p]) => {
     const init = getDefaultUnits(p.code), addl = getAddlAuth(p.cid,p.code);
     const prior = getPriorUnitsFor(p.cid,p.code), total = init+addl;
@@ -1379,28 +1380,127 @@ function exportOps() {
     const remaining = total ? total-totalUsed : null;
     const pct = total ? totalUsed/total : 0;
     const st = getRowStatus(totalUsed, total);
-    return { ...p, totalUsed, remaining, pct, st, total };
+    return { ...p, totalUsed, remaining, pct, st, total, prior, addl, init };
   });
   if (opsCompany) allRows = allRows.filter(r => r.company===opsCompany);
 
-  const data = allRows.sort((a,b) => (a.remaining??9999)-(b.remaining??9999)).map(r => ({
-    'Company': r.company||'', 'Location': r.location||'',
-    'Last Name': r.lname, 'First Name': r.fname, 'CID': r.cid,
-    'Code': r.code, 'Payer': r.payer||'',
-    'Total Used': r.totalUsed, 'Total Auth': r.total||'',
-    'Remaining': r.remaining!==null?r.remaining:'',
-    '% Used': r.total?Math.round(r.pct*100):'',
-    'Status': r.st==='over'?'Over Limit':r.st==='warn'?'Warning':r.st==='ok'?'OK':'No Auth'
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:14},{wch:16},{wch:15},{wch:14},{wch:7},{wch:12},{wch:16},{wch:10},{wch:10},{wch:10},{wch:8},{wch:12}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ops Summary');
+  let logs = authLog.slice();
+  if (opsCompany) { const cids = new Set(allRows.map(r=>r.cid)); logs = logs.filter(l=>cids.has(l.cid)); }
+
+  const overCount = allRows.filter(r=>r.st==='over').length;
+  const warnCount = allRows.filter(r=>r.st==='warn').length;
+  const pendingCount = logs.filter(l=>l.result==='Pending').length;
+  const authYes = logs.filter(l=>l.result==='Authorized').length;
+  const authNo = logs.filter(l=>l.result==='Not Authorized').length;
+  const totalDec = authYes+authNo;
+  const successRate = totalDec ? Math.round(authYes/totalDec*100)+'%' : '—';
+  const patCount = new Set(allRows.map(r=>r.cid)).size;
+  const companyLabel = opsCompany || 'All Companies';
+  const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  // Action list
+  const pendingCids = new Set(logs.filter(l=>l.result==='Pending').map(l=>l.cid+'|'+l.code));
+  const actionRows = allRows.filter(r=>r.total>0&&r.st!=='noauth').filter(r=>!pendingCids.has(r.cid+'|'+r.code))
+    .sort((a,b)=>(a.remaining??9999)-(b.remaining??9999)).slice(0,25);
+
+  // Location summary
+  const locMap = {};
+  allRows.forEach(r => {
+    const loc = r.location||'Unknown';
+    if (!locMap[loc]) locMap[loc] = {patients:new Set(),over:0,warn:0,ok:0,noauth:0};
+    locMap[loc].patients.add(r.cid);
+    if (r.st==='over') locMap[loc].over++; else if (r.st==='warn') locMap[loc].warn++;
+    else if (r.st==='ok') locMap[loc].ok++; else locMap[loc].noauth++;
+  });
+
+  const stColor = s => s==='over'?'#C0392B':s==='warn'?'#B07D2A':s==='ok'?'#3D6B5E':'#999';
+  const stLabel = s => s==='over'?'Over Limit':s==='warn'?'Warning':s==='ok'?'OK':'No Auth';
+
+  // Build HTML
+  let h = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Operations Summary — ${esc(companyLabel)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1E1428;font-size:13px;padding:32px 40px}
+  h1{font-size:22px;font-weight:700;color:#52307C;margin-bottom:2px}
+  .sub{font-size:13px;color:#6B5F80;margin-bottom:24px}
+  .kpis{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap}
+  .kpi{border:1px solid #E2DCF0;border-radius:8px;padding:14px 20px;min-width:130px;border-left:4px solid #52307C}
+  .kpi.red{border-left-color:#C0392B} .kpi.amber{border-left-color:#B07D2A} .kpi.green{border-left-color:#3D6B5E} .kpi.lav{border-left-color:#A67DC5}
+  .kpi-label{font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.6px}
+  .kpi-val{font-size:26px;font-weight:700;color:#52307C;margin-top:2px}
+  .kpi.red .kpi-val{color:#C0392B} .kpi.amber .kpi-val{color:#B07D2A} .kpi.green .kpi-val{color:#3D6B5E} .kpi.lav .kpi-val{color:#A67DC5}
+  h2{font-size:14px;font-weight:700;color:#52307C;margin:24px 0 10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E2DCF0;padding-bottom:6px}
+  table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  th{text-align:left;font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;border-bottom:1px solid #E2DCF0;background:#F9F7FC}
+  td{padding:6px 10px;border-bottom:1px solid #F3F0F7;font-size:12px}
+  .r{text-align:right} .b{font-weight:700}
+  .pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+  .bar-wrap{display:flex;align-items:center;gap:6px}
+  .bar{flex:1;height:5px;background:#F3F0F7;border-radius:3px;overflow:hidden;min-width:40px}
+  .bar-fill{height:100%;border-radius:3px}
+  .bar-pct{font-size:11px;font-weight:600;min-width:32px;text-align:right}
+  @media print{body{padding:16px;font-size:11px} .kpi{padding:8px 12px} .kpi-val{font-size:20px}}
+</style></head><body>
+<h1>Operations Summary — ${esc(companyLabel)}</h1>
+<div class="sub">${dateStr}</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="kpi-label">Total Patients</div><div class="kpi-val">${patCount}</div></div>
+  <div class="kpi red"><div class="kpi-label">Over Limit</div><div class="kpi-val">${overCount}</div></div>
+  <div class="kpi amber"><div class="kpi-label">Warning Zone</div><div class="kpi-val">${warnCount}</div></div>
+  <div class="kpi lav"><div class="kpi-label">Pending Auths</div><div class="kpi-val">${pendingCount}</div></div>
+  <div class="kpi green"><div class="kpi-label">Auth Success Rate</div><div class="kpi-val">${successRate}</div></div>
+  <div class="kpi"><div class="kpi-label">Auth Decisions</div><div class="kpi-val">${totalDec}</div></div>
+</div>
+
+<h2>Patients Approaching Limit — No Auth in Progress</h2>
+<table><thead><tr><th>Patient</th><th>Location</th><th>Code</th><th>Payer</th><th class="r">Used</th><th class="r">Auth</th><th class="r">Remaining</th><th class="r">% Used</th><th>Status</th></tr></thead><tbody>`;
+
+  if (!actionRows.length) h += '<tr><td colspan="9" style="text-align:center;color:#A699B8;padding:16px">No patients approaching limit without auth in progress</td></tr>';
+  else actionRows.forEach(r => {
+    const pctD = r.total?Math.round(r.pct*100):0;
+    h += `<tr><td class="b">${esc(r.lname)}, ${esc(r.fname)}<br><span style="color:#A699B8;font-size:10px">${r.cid}</span></td>
+      <td>${esc(r.location)||'—'}</td><td>${esc(r.code)}</td><td>${esc(r.payer)||'—'}</td>
+      <td class="r">${r.totalUsed}</td><td class="r">${r.total}</td>
+      <td class="r b" style="color:${stColor(r.st)}">${r.remaining!==null?r.remaining:'—'}</td>
+      <td class="r" style="color:${stColor(r.st)}">${pctD}%</td>
+      <td><span class="pill" style="background:${stColor(r.st)}22;color:${stColor(r.st)}">${stLabel(r.st)}</span></td></tr>`;
+  });
+  h += '</tbody></table>';
+
+  h += '<h2>Location Summary</h2><table><thead><tr><th>Location</th><th class="r">Patients</th><th class="r">Over Limit</th><th class="r">Warning</th><th class="r">OK</th><th class="r">No Auth</th><th style="min-width:100px">Health</th></tr></thead><tbody>';
+  Object.entries(locMap).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([loc,d]) => {
+    const tot = d.over+d.warn+d.ok+d.noauth;
+    const hp = tot?((d.ok+d.noauth)/tot*100):100;
+    const bc = hp>=80?'#3D6B5E':hp>=50?'#B07D2A':'#C0392B';
+    h += `<tr><td class="b">${esc(loc)}</td><td class="r">${d.patients.size}</td>
+      <td class="r" style="color:#C0392B">${d.over||''}</td><td class="r" style="color:#B07D2A">${d.warn||''}</td>
+      <td class="r" style="color:#3D6B5E">${d.ok||''}</td><td class="r" style="color:#999">${d.noauth||''}</td>
+      <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:${hp.toFixed(0)}%;background:${bc}"></div></div><span class="bar-pct" style="color:${bc}">${hp.toFixed(0)}%</span></div></td></tr>`;
+  });
+  h += '</tbody></table>';
+
+  h += `<h2>Authorization Pipeline</h2>
+<table><thead><tr><th>Result</th><th class="r">Count</th></tr></thead><tbody>
+  <tr><td>Authorized</td><td class="r b" style="color:#3D6B5E">${authYes}</td></tr>
+  <tr><td>Not Authorized</td><td class="r b" style="color:#C0392B">${authNo}</td></tr>
+  <tr><td>Pending</td><td class="r b" style="color:#B07D2A">${pendingCount}</td></tr>
+</tbody></table>`;
+
+  h += '</body></html>';
+
+  // Download as HTML file
+  const blob = new Blob([h], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   let fname = 'Ops_Summary';
   if (opsCompany) fname += '_'+opsCompany;
-  fname += '_'+new Date().toISOString().slice(0,10)+'.xlsx';
-  XLSX.writeFile(wb, fname);
-  toast(`Exported ops summary to Excel`, 'ok');
+  fname += '_'+new Date().toISOString().slice(0,10)+'.html';
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported ops summary as HTML', 'ok');
 }
 
 // ═══════════════════════════════════════════════════════════════════
