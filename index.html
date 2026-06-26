@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claims Unit Tracker</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#F7F5F9;color:#1E1428;font-size:14px}
+
+  /* ── HEADER ── */
+  .header{background:linear-gradient(135deg,#3D1F66,#52307C);color:#fff;padding:18px 32px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+  .header-left{display:flex;align-items:center;gap:14px}
+  .header-title{font-size:20px;font-weight:700;letter-spacing:-.3px}
+  .header-sub{font-size:11px;opacity:.7;margin-top:2px}
+  .header-right{display:flex;align-items:center;gap:14px}
+  .conn-badge{display:flex;align-items:center;gap:5px;font-size:11px;opacity:.8}
+  .conn-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4)}
+  .conn-dot.on{background:#81C995}
+
+  /* ── TABS ── */
+  .tabs{background:#fff;border-bottom:1px solid #E2DCF0;display:flex;padding:0 32px}
+  .tab{font-size:12px;font-weight:600;padding:12px 22px;cursor:pointer;color:#A699B8;border-bottom:2px solid transparent;text-transform:uppercase;letter-spacing:.6px;transition:color .15s,border-color .15s;user-select:none}
+  .tab:hover{color:#52307C}
+  .tab.active{color:#52307C;border-bottom-color:#52307C}
+  .tab-count{display:inline-block;margin-left:6px;background:#F3F0F7;color:#A699B8;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700}
+  .tab.active .tab-count{background:#EDE8F5;color:#52307C}
+
+  .panel{display:none}
+  .panel.active{display:block}
+
+  /* ── WRAP ── */
+  .wrap{max-width:1260px;margin:0 auto;padding:20px 24px 40px}
+
+  /* ── ADMIN ── */
+  .save-status{font-size:11px;color:#A699B8;display:inline-flex;align-items:center;gap:5px;transition:opacity .3s}
+  .save-status.saving{color:#B07D2A}
+  .save-status.saved{color:#3D6B5E}
+  .save-status.error{color:#C0392B}
+
+  /* ── BUTTONS ── */
+  .btn{font-family:'Segoe UI',system-ui,sans-serif;font-size:12px;font-weight:600;padding:7px 16px;border-radius:6px;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+  .btn:hover{opacity:.85}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn-primary{background:#52307C;color:#fff}
+  .btn-secondary{background:#F3F0F7;border:1px solid #E2DCF0;color:#52307C}
+  .btn-ok{background:#3D6B5E;color:#fff}
+  .btn-warn{background:#B07D2A;color:#fff}
+  .btn-danger{background:#C0392B;color:#fff}
+  .btn-sm{padding:5px 12px;font-size:11px}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;padding:5px 12px}
+  .btn-ghost:hover{background:rgba(255,255,255,.1)}
+  .btn-ghost-dark{background:transparent;border:1px solid #E2DCF0;color:#A699B8;font-size:11px;padding:5px 12px}
+  .btn-ghost-dark:hover{border-color:#52307C;color:#52307C}
+
+  /* ── INPUTS ── */
+  .input{background:#fff;border:1px solid #E2DCF0;color:#1E1428;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;padding:7px 10px;border-radius:6px}
+  .input:focus{outline:none;border-color:#52307C;box-shadow:0 0 0 2px rgba(82,48,124,.12)}
+  .input-mono{font-family:monospace;font-size:12px}
+  select.input{cursor:pointer}
+
+  input[type="file"]{display:none}
+  label.file-btn{font-family:'Segoe UI',system-ui,sans-serif;font-size:12px;font-weight:600;padding:7px 16px;border-radius:6px;background:#F3F0F7;border:1px solid #E2DCF0;color:#52307C;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:5px}
+  label.file-btn:hover{opacity:.85}
+
+  /* ── CARDS ── */
+  .card{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(82,48,124,.08);overflow:hidden;margin-bottom:18px;border:1px solid #E2DCF0}
+  .card-hdr{padding:12px 18px;background:#F3F0F7;border-bottom:1px solid #E2DCF0;font-size:13px;font-weight:600;color:#52307C;display:flex;align-items:center;justify-content:space-between}
+
+  /* ── KPI TILES ── */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .kpi{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(82,48,124,.08);border-left:4px solid #52307C}
+  .kpi.sage{border-left-color:#3D6B5E}
+  .kpi.amber{border-left-color:#B07D2A}
+  .kpi.lav{border-left-color:#A67DC5}
+  .kpi.danger{border-left-color:#C0392B}
+  .kpi-label{font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+  .kpi-val{font-size:30px;font-weight:700;color:#52307C;line-height:1}
+  .kpi.sage .kpi-val{color:#3D6B5E}
+  .kpi.amber .kpi-val{color:#B07D2A}
+  .kpi.lav .kpi-val{color:#A67DC5}
+  .kpi.danger .kpi-val{color:#C0392B}
+
+  /* ── TABLES ── */
+  table{width:100%;border-collapse:collapse}
+  thead th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #E2DCF0;background:#F3F0F7;white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:#52307C}
+  thead th.no-sort{cursor:default}
+  thead th.no-sort:hover{color:#A699B8}
+  tbody tr{border-bottom:1px solid #F3F0F7}
+  tbody tr:hover{background:#F9F7FC}
+  tbody td{padding:9px 12px;vertical-align:middle;font-size:13px}
+
+  .patient-name{font-weight:600;color:#1E1428}
+  .cid-tag{font-family:monospace;font-size:11px;color:#A699B8}
+  .code-pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .pill-indiv{background:#EDE8F5;color:#52307C}
+  .pill-group{background:#E8F2EE;color:#3D6B5E}
+  .num{font-weight:600;color:#52307C}
+  .r{text-align:right}
+  .c{text-align:center}
+
+  .cell-input{background:#fff;border:1px solid #E2DCF0;color:#1E1428;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;padding:5px 8px;border-radius:6px;width:72px;text-align:right}
+  .cell-input:focus{outline:none;border-color:#52307C;box-shadow:0 0 0 2px rgba(82,48,124,.12)}
+  .cell-input-wide{width:160px;text-align:left}
+
+  /* ── PROGRESS ── */
+  .prog{display:flex;align-items:center;gap:6px}
+  .prog-bar{flex:1;height:6px;background:#F3F0F7;border-radius:4px;overflow:hidden;min-width:50px}
+  .prog-fill{height:100%;border-radius:4px;transition:width .25s}
+  .f-ok{background:#3D6B5E}
+  .f-warn{background:#B07D2A}
+  .f-over{background:#C0392B}
+  .prog-pct{font-size:12px;font-weight:700;min-width:34px;text-align:right}
+  .c-ok{color:#3D6B5E}
+  .c-warn{color:#B07D2A}
+  .c-over{color:#C0392B}
+  .c-dim{color:#A699B8}
+
+  /* ── STATUS BADGES ── */
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-ok{background:#E8F2EE;color:#3D6B5E}
+  .badge-denied{background:#FBEAE8;color:#C0392B}
+  .badge-pending{background:#FDF4E3;color:#B07D2A}
+
+  /* ── TOOLBAR ── */
+  .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .toolbar-sep{width:1px;height:22px;background:#E2DCF0}
+
+  /* ── AUTH LOG FORM ── */
+  .log-form{background:#fff;border:1px solid #E2DCF0;border-radius:10px;padding:18px 20px;margin-bottom:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;align-items:end;box-shadow:0 1px 4px rgba(82,48,124,.08)}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.6px}
+
+  /* ── GUIDE PANEL ── */
+  #gas-code{background:#1E1428;border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#A67DC5;overflow-x:auto;white-space:pre;max-height:360px;overflow-y:auto}
+
+  /* ── EMPTY STATE ── */
+  .empty{text-align:center;padding:48px 24px;color:#A699B8;font-size:13px;line-height:1.8}
+  .empty .icon{font-size:2rem;margin-bottom:6px}
+
+  /* ── TOAST ── */
+  #toast{position:fixed;bottom:20px;right:20px;z-index:999;background:#fff;border:1px solid #E2DCF0;border-radius:10px;padding:12px 18px;font-size:13px;max-width:360px;box-shadow:0 4px 12px rgba(82,48,124,.15);transform:translateY(80px);opacity:0;transition:transform .2s,opacity .2s;display:flex;align-items:center;gap:8px}
+  #toast.show{transform:translateY(0);opacity:1}
+  #toast.t-ok{border-left:4px solid #3D6B5E}
+  #toast.t-warn{border-left:4px solid #B07D2A}
+  #toast.t-err{border-left:4px solid #C0392B}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #E2DCF0;border-top-color:#52307C;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .section-info{font-size:13px;color:#6B5F80;margin-bottom:14px}
+
+  /* ── FILTER BUTTONS ── */
+  .filter-group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .filter-group-label{font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.6px;margin-right:2px}
+  .fbtn{font-family:'Segoe UI',system-ui,sans-serif;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;border:1px solid #E2DCF0;background:#fff;color:#6B5F80;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .fbtn:hover{border-color:#52307C;color:#52307C}
+  .fbtn.active{background:#52307C;border-color:#52307C;color:#fff}
+  .fbtn.active-ok{background:#3D6B5E;border-color:#3D6B5E;color:#fff}
+  .fbtn.active-warn{background:#B07D2A;border-color:#B07D2A;color:#fff}
+  .fbtn.active-over{background:#C0392B;border-color:#C0392B;color:#fff}
+  .fbtn.active-dim{background:#6B5F80;border-color:#6B5F80;color:#fff}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="header-title">Claims Unit Tracker</div>
+      <div class="header-sub">Service Authorization Management</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="conn-badge"><div class="conn-dot" id="conn-dot"></div><span id="conn-text">Not connected</span></div>
+  </div>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <div class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">
+    Dashboard <span class="tab-count" id="tc-dashboard">0</span>
+  </div>
+  <div class="tab" data-tab="authlog" onclick="switchTab('authlog')">
+    Authorization Log <span class="tab-count" id="tc-authlog">0</span>
+  </div>
+  <div class="tab" data-tab="priorunits" onclick="switchTab('priorunits')">
+    Prior Units <span class="tab-count" id="tc-prior">0</span>
+  </div>
+  <div style="flex:1"></div>
+  <div class="tab" data-tab="admin" onclick="switchTab('admin')" style="opacity:.7">
+    ⚙ Admin
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PANEL: PRIOR UNITS                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-priorunits">
+  <div class="wrap">
+    <div class="log-form">
+      <div class="field">
+        <label>Patient</label>
+        <select class="input" id="pu-patient"><option value="">Select…</option></select>
+      </div>
+      <div class="field">
+        <label>Code</label>
+        <select class="input" id="pu-code"><option value="">Select…</option></select>
+      </div>
+      <div class="field">
+        <label>Prior Units Used</label>
+        <input class="input input-mono" id="pu-units" type="number" min="0" placeholder="Units from prior provider">
+      </div>
+      <div class="field" style="justify-content:flex-end">
+        <button class="btn btn-primary" onclick="addPriorUnit()">Add Prior Units</button>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-bottom:8px">
+      <input class="input" id="pu-search" type="text" placeholder="Search…" oninput="renderPriorUnits()" style="width:220px">
+      <div style="flex:1"></div>
+      <span class="save-status" id="prior-save"></span>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th>Patient</th><th>Company</th><th>Location</th><th>Code</th><th>Payer</th><th class="r">Prior Units</th><th class="no-sort" style="width:36px"></th>
+        </tr></thead>
+        <tbody id="prior-body">
+          <tr><td colspan="7"><div class="empty"><div class="icon">📦</div>No prior units logged yet.</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PANEL: ADMIN                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-admin">
+  <div class="wrap">
+    <div class="section-info">Connection settings and data sync. Only administrators should modify these settings.</div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-hdr">Google Sheet Connection</div>
+      <div style="padding:18px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.6px">Apps Script URL</label>
+          <input class="input input-mono" id="script-url" type="text" placeholder="https://script.google.com/macros/s/…/exec" oninput="saveConfig()" style="width:420px">
+          <button class="btn btn-primary btn-sm" onclick="testConnection()">Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-hdr">CSV Ledger Import</div>
+      <div style="padding:18px">
+        <p style="font-size:13px;color:#6B5F80;line-height:1.6;margin-bottom:14px">
+          Import the daily ledger export from each company's clinical software. Units are aggregated by patient and grouped by billing code using the prefix matches defined in Code Defaults.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <label class="file-btn" for="csv-brookfield" style="min-width:200px">⬆ Brookfield</label>
+            <input type="file" id="csv-brookfield" accept=".csv" onchange="handleCSV(this,'Brookfield')">
+            <span id="import-brookfield" style="font-size:11px;color:#A699B8"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label class="file-btn" for="csv-castlereagh" style="min-width:200px">⬆ Castlereagh</label>
+            <input type="file" id="csv-castlereagh" accept=".csv" onchange="handleCSV(this,'Castlereagh')">
+            <span id="import-castlereagh" style="font-size:11px;color:#A699B8"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label class="file-btn" for="csv-balance" style="min-width:200px">⬆ Balance</label>
+            <input type="file" id="csv-balance" accept=".csv" onchange="handleCSV(this,'Balance')">
+            <span id="import-balance" style="font-size:11px;color:#A699B8"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-hdr">
+        <span>Code Defaults</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="save-status" id="defaults-save"></span>
+          <button class="btn btn-secondary btn-sm" onclick="addDefault()">+ Add Code</button>
+        </div>
+      </div>
+      <div style="padding:0">
+        <p style="font-size:12px;color:#6B5F80;padding:12px 18px 8px;margin:0">Set the initial authorized units per code. The CSV Prefix groups all modifier variants together (e.g. "CPST Individual" matches CPST Individual UK, HN, HO, etc.).</p>
+        <table>
+          <thead>
+            <tr>
+              <th class="no-sort">Code</th>
+              <th class="no-sort">CSV Prefix</th>
+              <th class="no-sort">Description</th>
+              <th class="no-sort r">Initial Units Authorized</th>
+              <th class="no-sort r">Auth Period</th>
+              <th class="no-sort">Notes</th>
+              <th class="no-sort" style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="defaults-body">
+            <tr><td colspan="7"><div class="empty"><div class="icon">📋</div>No code defaults yet.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <span>Google Apps Script — Setup Guide</span>
+        <button class="btn btn-secondary btn-sm" onclick="copyScript()">Copy Script</button>
+      </div>
+      <div style="padding:18px">
+        <p style="font-size:13px;color:#6B5F80;line-height:1.6;margin-bottom:12px">
+          1. Go to <strong>script.google.com</strong> → New project → paste the code below → Save.<br>
+          2. <strong>Deploy → New deployment → Web app</strong>. Set "Execute as" to <em>Me</em>, "Who has access" to <em>Anyone</em>. Copy the URL → paste above.<br>
+          3. Authorize when prompted. Three sheet tabs are auto-created on first push: CodeDefaults, AuthLog, Dashboard.
+        </p>
+        <pre id="gas-code"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PANEL 2: AUTHORIZATION LOG                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-authlog">
+  <div class="wrap">
+    <div class="log-form">
+      <div class="field">
+        <label>Patient</label>
+        <select class="input" id="al-patient"><option value="">Select…</option></select>
+      </div>
+      <div class="field">
+        <label>Code</label>
+        <select class="input" id="al-code"><option value="">Select…</option></select>
+      </div>
+      <div class="field">
+        <label>Payer</label>
+        <select class="input" id="al-payer"><option value="">Select…</option></select>
+      </div>
+      <div class="field">
+        <label>Employee</label>
+        <input class="input" id="al-employee" type="text" placeholder="Who contacted payer">
+      </div>
+      <div class="field">
+        <label>Date Contacted</label>
+        <input class="input input-mono" id="al-date" type="date">
+      </div>
+      <div class="field">
+        <label>Result</label>
+        <select class="input" id="al-result" onchange="toggleAddlUnits()">
+          <option value="">Select…</option>
+          <option value="Authorized">Authorized</option>
+          <option value="Not Authorized">Not Authorized</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="field" id="al-units-wrap" style="display:none">
+        <label>Add'l Units Authorized</label>
+        <input class="input input-mono" id="al-units" type="number" min="0" value="">
+      </div>
+      <div class="field" id="al-authnum-wrap" style="display:none">
+        <label>Auth #</label>
+        <input class="input input-mono" id="al-authnum" type="text" placeholder="Payer auth number">
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <input class="input" id="al-notes" type="text" placeholder="Optional…">
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <button class="btn btn-primary" id="al-submit-btn" onclick="addAuthEntry()">Log Request</button>
+        <button class="btn btn-secondary" id="al-cancel-btn" onclick="cancelAuthEdit()" style="display:none">Cancel</button>
+      </div>
+    </div>
+
+    <div class="toolbar" style="margin-bottom:8px">
+      <input class="input" id="al-search" type="text" placeholder="Search log…" oninput="renderAuthLog()" style="width:220px;">
+      <select class="input" id="al-filter" onchange="renderAuthLog()">
+        <option value="">All Results</option>
+        <option value="Authorized">Authorized</option>
+        <option value="Not Authorized">Not Authorized</option>
+        <option value="Pending">Pending</option>
+      </select>
+      <div style="flex:1"></div>
+      <span class="save-status" id="authlog-save"></span>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Code</th>
+            <th>Payer</th>
+            <th>Employee</th>
+            <th>Date</th>
+            <th>Result</th>
+            <th class="r">Add'l Units</th>
+            <th>Auth #</th>
+            <th>Notes</th>
+            <th class="no-sort" style="width:70px"></th>
+          </tr>
+        </thead>
+        <tbody id="authlog-body">
+          <tr><td colspan="10"><div class="empty"><div class="icon">📞</div>No authorization requests logged yet.</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PANEL 3: DASHBOARD                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="panel active" id="panel-dashboard">
+  <div class="wrap">
+    <div class="toolbar" style="gap:14px">
+      <input class="input" id="dash-search" type="text" placeholder="Search patient or code…" oninput="renderDash()" style="width:220px">
+      <div class="toolbar-sep"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">Status</span>
+        <button class="fbtn active" onclick="setStatusFilter('')">All</button>
+        <button class="fbtn" data-status="ok" onclick="setStatusFilter('ok')">OK</button>
+        <button class="fbtn" data-status="warn" onclick="setStatusFilter('warn')">Warning</button>
+        <button class="fbtn" data-status="over" onclick="setStatusFilter('over')">Over Limit</button>
+        <button class="fbtn" data-status="noauth" onclick="setStatusFilter('noauth')">No Auth</button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">Code</span>
+        <select class="input" id="code-filter-select" onchange="setCodeFilter(this.value)" style="min-width:160px">
+          <option value="">All Codes</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Company</span>
+        <button class="fbtn active" onclick="setCompanyFilter('')">All</button>
+        <button class="fbtn" data-company="Brookfield" onclick="setCompanyFilter('Brookfield')">Brookfield</button>
+        <button class="fbtn" data-company="Castlereagh" onclick="setCompanyFilter('Castlereagh')">Castlereagh</button>
+        <button class="fbtn" data-company="Balance" onclick="setCompanyFilter('Balance')">Balance</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Location</span>
+        <select class="input" id="location-filter-select" onchange="setLocationFilter(this.value)" style="min-width:160px">
+          <option value="">All Locations</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Payer</span>
+        <select class="input" id="payer-filter-select" onchange="setPayerFilter(this.value)" style="min-width:160px">
+          <option value="">All Payers</option>
+        </select>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Patients</div><div class="kpi-val" id="t-pat">—</div></div>
+      <div class="kpi lav"><div class="kpi-label">Active Codes</div><div class="kpi-val" id="t-codes">—</div></div>
+      <div class="kpi danger"><div class="kpi-label">Over Limit</div><div class="kpi-val" id="t-over">0</div></div>
+      <div class="kpi amber"><div class="kpi-label">Warning</div><div class="kpi-val" id="t-warn">0</div></div>
+      <div class="kpi"><div class="kpi-label">No Auth Set</div><div class="kpi-val" id="t-noauth">0</div></div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+      <button class="btn btn-secondary btn-sm" onclick="exportDashboard()">⬇ Export to Excel</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="dashSort('lname')">Patient</th>
+            <th onclick="dashSort('location')">Location</th>
+            <th onclick="dashSort('company')">Company</th>
+            <th onclick="dashSort('code')">Code</th>
+            <th>Payer</th>
+            <th class="r">Prior</th>
+            <th class="r" onclick="dashSort('units_used')">Used</th>
+            <th class="r">Initial Auth</th>
+            <th class="r">Add'l Auth</th>
+            <th class="r">Total Auth</th>
+            <th style="min-width:140px">Usage</th>
+            <th class="r" onclick="dashSort('remaining')">Remaining</th>
+            <th>Auth Requests</th>
+          </tr>
+        </thead>
+        <tbody id="dash-body">
+          <tr><td colspan="14"><div class="empty"><div class="icon">📊</div>Import a CSV ledger to get started.</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let codeDefaults = [];        // {id, code, alias, desc, initialUnits, period, notes}
+let authLog = [];             // {id, cid, patientName, code, employee, date, result, addlUnits, authNum, notes}
+let patients = {};            // "CID|Code" → {cid, fname, lname, code, codeDesc, payer, units_used}
+let dSortCol = 'lname', dSortDir = 1;
+let activeCodeFilter = '';
+let activeStatusFilter = '';
+let activeCompanyFilter = '';
+let activeLocationFilter = '';
+let activePayerFilter = '';
+let priorUnits = [];  // {id, cid, patientName, company, location, code, payer, prior}
+let connected = false;
+let nextDefId = 1, nextLogId = 1;
+
+// ═══════════════════════════════════════════════════════════════════
+//  APPS SCRIPT (embedded)
+// ═══════════════════════════════════════════════════════════════════
+const GAS_CODE = `// Claims Unit Tracker — Google Apps Script Backend
+// Deploy as Web App: Execute as Me, Anyone can access
+// Three sheets are auto-created: CodeDefaults, AuthLog, Dashboard
+
+var AUTH_HEADERS = ['id','cid','patientName','code','payer','employee','date','result','addlUnits','authNum','notes'];
+var PRIOR_HEADERS = ['id','cid','patientName','company','location','code','payer','prior'];
+
+function doGet(e)  { return handle(e); }
+function doPost(e) { return handle(e); }
+
+function handle(e) {
+  var p = e.parameter;
+  var action = p.action || '';
+  if (e.postData) {
+    try { var body = JSON.parse(e.postData.contents); action = body.action || action; } catch(x){}
+  }
+  var result;
+  try {
+    switch(action) {
+      case 'ping':          result = {ok:true}; break;
+      case 'pullDefaults':  result = pullSheet('CodeDefaults'); break;
+      case 'pullAuthLog':   result = pullSheet('AuthLog'); break;
+      case 'pullDashboard': result = pullSheet('Dashboard'); break;
+      case 'pushDefaults':  result = pushSheet('CodeDefaults', body.rows, ['id','code','alias','desc','initialUnits','period','notes']); break;
+      case 'pushAuthLog':   result = pushSheet('AuthLog', body.rows, AUTH_HEADERS); break;
+      case 'appendAuthEntry':
+        var sh = getSheet('AuthLog', AUTH_HEADERS);
+        var arr = AUTH_HEADERS.map(function(h){ return body.entry[h] !== undefined ? body.entry[h] : ''; });
+        sh.appendRow(arr);
+        result = {ok:true};
+        break;
+      case 'deleteAuthEntry':
+        var sh2 = getSheet('AuthLog', AUTH_HEADERS);
+        var data2 = sh2.getDataRange().getValues();
+        var idCol = data2[0].indexOf('id');
+        for (var i = data2.length - 1; i >= 1; i--) {
+          if (String(data2[i][idCol]) === String(body.id)) {
+            sh2.deleteRow(i + 1);
+            break;
+          }
+        }
+        result = {ok:true};
+        break;
+      case 'pushDashboard': result = pushSheet('Dashboard', body.rows, ['key','cid','fname','lname','code','codeDesc','payer','location','company','units_used','initialAuth','addlAuth','totalAuth','remaining','pctUsed','lastUpdated']); break;
+      case 'pullPriorUnits': result = pullSheet('PriorUnits'); break;
+      case 'pushPriorUnits': result = pushSheet('PriorUnits', body.rows, PRIOR_HEADERS); break;
+      case 'appendPriorUnit':
+        var shP = getSheet('PriorUnits', PRIOR_HEADERS);
+        var arrP = PRIOR_HEADERS.map(function(h){ return body.entry[h] !== undefined ? body.entry[h] : ''; });
+        shP.appendRow(arrP);
+        result = {ok:true};
+        break;
+      case 'deletePriorUnit':
+        var shP2 = getSheet('PriorUnits', PRIOR_HEADERS);
+        var dataP2 = shP2.getDataRange().getValues();
+        var idColP = dataP2[0].indexOf('id');
+        for (var j = dataP2.length - 1; j >= 1; j--) {
+          if (String(dataP2[j][idColP]) === String(body.id)) { shP2.deleteRow(j + 1); break; }
+        }
+        result = {ok:true};
+        break;
+      default: result = {ok:false, error:'Unknown action: '+action};
+    }
+  } catch(err) { result = {ok:false, error: err.message}; }
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSheet(name, headers) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.appendRow(headers);
+    sh.setFrozenRows(1);
+    sh.getRange(1,1,1,headers.length).setFontWeight('bold');
+  }
+  return sh;
+}
+
+function pullSheet(name) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(name);
+  if (!sh) return {ok:true, rows:[]};
+  var data = sh.getDataRange().getValues();
+  if (data.length <= 1) return {ok:true, rows:[]};
+  var headers = data[0];
+  var rows = [];
+  for (var i=1; i<data.length; i++) {
+    var obj = {};
+    headers.forEach(function(h,j){ obj[h] = data[i][j]; });
+    rows.push(obj);
+  }
+  return {ok:true, rows:rows};
+}
+
+function pushSheet(name, rows, headers) {
+  var sh = getSheet(name, headers);
+  if (sh.getLastRow() > 1) sh.deleteRows(2, sh.getLastRow()-1);
+  rows.forEach(function(row) {
+    var arr = headers.map(function(h){ return row[h] !== undefined ? row[h] : ''; });
+    sh.appendRow(arr);
+  });
+  return {ok:true, pushed: rows.length};
+}`;
+
+document.getElementById('gas-code').textContent = GAS_CODE;
+
+// ═══════════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id==='panel-'+tab));
+  if (tab==='authlog') populateAuthFormSelects();
+  if (tab==='priorunits') populatePriorFormSelects();
+  if (tab==='dashboard') renderDash();
+}
+
+function updateTabCounts() {
+  document.getElementById('tc-authlog').textContent = authLog.length;
+  document.getElementById('tc-prior').textContent = priorUnits.length;
+  document.getElementById('tc-dashboard').textContent = Object.keys(patients).length;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PANEL 1: CODE DEFAULTS
+// ═══════════════════════════════════════════════════════════════════
+function addDefault() {
+  codeDefaults.push({
+    id: nextDefId++, code: '', alias: '', desc: '', initialUnits: '', period: '7/1/26–6/30/27', notes: ''
+  });
+  renderDefaults();
+  autoSaveDefaults();
+}
+
+function renderDefaults() {
+  const tb = document.getElementById('defaults-body');
+  if (codeDefaults.length === 0) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="icon">📋</div>No code defaults yet. Click "+ Add Code Default" to begin.</div></td></tr>';
+    updateTabCounts(); return;
+  }
+  tb.innerHTML = codeDefaults.map((d,i) => `<tr>
+    <td><input class="cell-input" style="width:120px;text-align:left" value="${esc(d.code)}" oninput="codeDefaults[${i}].code=this.value;autoSaveDefaults()" placeholder="H0036"></td>
+    <td><input class="cell-input" style="width:170px;text-align:left" value="${esc(d.alias)}" oninput="codeDefaults[${i}].alias=this.value;autoSaveDefaults()" placeholder="CSV prefix…"></td>
+    <td><input class="cell-input" style="width:150px;text-align:left" value="${esc(d.desc)}" oninput="codeDefaults[${i}].desc=this.value;autoSaveDefaults()" placeholder="Description"></td>
+    <td class="r"><input class="cell-input" type="number" min="0" value="${d.initialUnits}" oninput="codeDefaults[${i}].initialUnits=this.value;autoSaveDefaults()"></td>
+    <td class="r"><input class="cell-input" style="width:130px;text-align:left" value="${esc(d.period)}" oninput="codeDefaults[${i}].period=this.value;autoSaveDefaults()"></td>
+    <td><input class="cell-input cell-input-wide" value="${esc(d.notes)}" oninput="codeDefaults[${i}].notes=this.value;autoSaveDefaults()" placeholder="Notes…"></td>
+    <td><button class="btn btn-ghost-dark btn-sm" style="color:#C0392B" onclick="codeDefaults.splice(${i},1);renderDefaults();autoSaveDefaults()">✕</button></td>
+  </tr>`).join('');
+  updateTabCounts();
+}
+
+function findDefault(csvCode) {
+  const c = csvCode.trim().toLowerCase();
+  return codeDefaults.find(d => {
+    if (!d.initialUnits) return false;
+    if (d.code.trim().toLowerCase() === c) return true;
+    if (d.alias && c.startsWith(d.alias.trim().toLowerCase())) return true;
+    return false;
+  }) || null;
+}
+
+function getDefaultUnits(code) {
+  const match = findDefault(code);
+  return match ? Number(match.initialUnits) || 0 : 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PANEL 2: AUTHORIZATION LOG
+// ═══════════════════════════════════════════════════════════════════
+function populateAuthFormSelects() {
+  const pSel = document.getElementById('al-patient');
+  const cSel = document.getElementById('al-code');
+  const paySel = document.getElementById('al-payer');
+  const pts = {};
+  Object.values(patients).forEach(p => { pts[p.cid] = p.lname + ', ' + p.fname + ' (' + p.cid + ')'; });
+  const curP = pSel.value;
+  pSel.innerHTML = '<option value="">Select…</option>' +
+    Object.entries(pts).sort((a,b) => a[1].localeCompare(b[1])).map(([cid,name]) =>
+      `<option value="${cid}" ${cid===curP?'selected':''}>${name}</option>`
+    ).join('');
+  const codes = [...new Set(Object.values(patients).map(p => p.code))].sort();
+  const curC = cSel.value;
+  cSel.innerHTML = '<option value="">Select…</option>' +
+    codes.map(c => `<option value="${c}" ${c===curC?'selected':''}>${c}</option>`).join('');
+  const payers = [...new Set(Object.values(patients).map(p => p.payer).filter(Boolean))].sort();
+  const curPay = paySel.value;
+  paySel.innerHTML = '<option value="">Select…</option>' +
+    payers.map(p => `<option value="${p}" ${p===curPay?'selected':''}>${p}</option>`).join('');
+}
+
+function toggleAddlUnits() {
+  const isAuth = document.getElementById('al-result').value === 'Authorized';
+  document.getElementById('al-units-wrap').style.display = isAuth ? '' : 'none';
+  document.getElementById('al-authnum-wrap').style.display = isAuth ? '' : 'none';
+}
+
+let editingAuthId = null;
+
+function addAuthEntry() {
+  const cidVal = document.getElementById('al-patient').value;
+  const code   = document.getElementById('al-code').value;
+  const payer  = document.getElementById('al-payer').value;
+  const emp    = document.getElementById('al-employee').value.trim();
+  const dt     = document.getElementById('al-date').value;
+  const result = document.getElementById('al-result').value;
+  if (!cidVal || !code || !emp || !dt || !result) { toast('Fill in all required fields.', 'warn'); return; }
+  const addl = result === 'Authorized' ? (Number(document.getElementById('al-units').value) || 0) : 0;
+  const authNum = result === 'Authorized' ? document.getElementById('al-authnum').value.trim() : '';
+  const notes = document.getElementById('al-notes').value.trim();
+  const pt = Object.values(patients).find(p => p.cid == cidVal);
+  const pName = pt ? (pt.lname + ', ' + pt.fname) : ('CID ' + cidVal);
+
+  if (editingAuthId) {
+    // Edit mode: delete old, append updated
+    const entry = { id: editingAuthId, cid: cidVal, patientName: pName, code, payer, employee: emp, date: dt, result, addlUnits: addl, authNum, notes };
+    authLog = authLog.filter(e => e.id !== editingAuthId);
+    authLog.push(entry);
+    clearAuthForm();
+    renderAuthLog();
+    deleteAuthFromSheet(editingAuthId).then(() => autoSaveAuthLog(entry));
+    toast(`Authorization request updated for ${pName}`, 'ok');
+  } else {
+    const entry = { id: Date.now()+'-'+Math.random().toString(36).substr(2,5), cid: cidVal, patientName: pName, code, payer, employee: emp, date: dt, result, addlUnits: addl, authNum, notes };
+    authLog.push(entry);
+    clearAuthForm();
+    renderAuthLog();
+    autoSaveAuthLog(entry);
+    toast(`Authorization request logged for ${pName}`, 'ok');
+  }
+}
+
+function editAuthEntry(id) {
+  const e = authLog.find(a => a.id === id);
+  if (!e) return;
+  editingAuthId = id;
+  document.getElementById('al-patient').value = e.cid;
+  document.getElementById('al-code').value = e.code;
+  document.getElementById('al-payer').value = e.payer || '';
+  document.getElementById('al-employee').value = e.employee;
+  document.getElementById('al-date').value = e.date;
+  document.getElementById('al-result').value = e.result;
+  toggleAddlUnits();
+  if (e.result === 'Authorized') {
+    document.getElementById('al-units').value = e.addlUnits;
+    document.getElementById('al-authnum').value = e.authNum || '';
+  }
+  document.getElementById('al-notes').value = e.notes || '';
+  document.getElementById('al-submit-btn').textContent = 'Update Request';
+  document.getElementById('al-cancel-btn').style.display = '';
+  window.scrollTo({top: document.getElementById('panel-authlog').offsetTop, behavior:'smooth'});
+}
+
+function cancelAuthEdit() {
+  editingAuthId = null;
+  clearAuthForm();
+}
+
+function clearAuthForm() {
+  editingAuthId = null;
+  document.getElementById('al-patient').value = '';
+  document.getElementById('al-code').value = '';
+  document.getElementById('al-payer').value = '';
+  document.getElementById('al-employee').value = '';
+  document.getElementById('al-date').value = '';
+  document.getElementById('al-result').value = '';
+  document.getElementById('al-units').value = '';
+  document.getElementById('al-authnum').value = '';
+  document.getElementById('al-notes').value = '';
+  document.getElementById('al-units-wrap').style.display = 'none';
+  document.getElementById('al-authnum-wrap').style.display = 'none';
+  document.getElementById('al-submit-btn').textContent = 'Log Request';
+  document.getElementById('al-cancel-btn').style.display = 'none';
+}
+
+function deleteLogEntry(id) { authLog = authLog.filter(e => e.id !== id); renderAuthLog(); deleteAuthFromSheet(id); }
+
+function renderAuthLog() {
+  const search = (document.getElementById('al-search').value || '').toLowerCase();
+  const filter = document.getElementById('al-filter').value;
+  let rows = authLog.slice().reverse();
+  if (filter) rows = rows.filter(r => r.result === filter);
+  if (search) rows = rows.filter(r => (r.patientName+' '+r.code+' '+r.employee+' '+r.notes).toLowerCase().includes(search));
+
+  const tb = document.getElementById('authlog-body');
+  if (rows.length === 0) {
+    tb.innerHTML = '<tr><td colspan="10"><div class="empty"><div class="icon">📞</div>No authorization requests logged yet.</div></td></tr>';
+    updateTabCounts(); return;
+  }
+  tb.innerHTML = rows.map(r => {
+    const bCls = r.result==='Authorized' ? 'badge-ok' : r.result==='Pending' ? 'badge-pending' : 'badge-denied';
+    return `<tr>
+      <td><span class="patient-name">${esc(r.patientName)}</span><div class="cid-tag">${r.cid}</div></td>
+      <td><span class="code-pill ${(r.code+' '+r.patientName).toLowerCase().includes('group')||r.code.includes('HQ')?'pill-group':'pill-indiv'}">${esc(r.code)}</span></td>
+      <td style="font-size:12px;color:#6B5F80">${esc(r.payer)||'—'}</td>
+      <td>${esc(r.employee)}</td>
+      <td style="font-size:12px;color:#6B5F80">${r.date}</td>
+      <td><span class="badge ${bCls}">${r.result}</span></td>
+      <td class="r num">${r.result==='Authorized' ? r.addlUnits : '—'}</td>
+      <td style="font-family:monospace;font-size:12px;color:#52307C">${r.result==='Authorized' && r.authNum ? esc(r.authNum) : '<span style="color:#A699B8">—</span>'}</td>
+      <td style="color:#6B5F80;font-size:12px">${esc(r.notes)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-ghost-dark btn-sm" onclick="editAuthEntry('${r.id}')" title="Edit">✎</button> <button class="btn btn-ghost-dark btn-sm" style="color:#C0392B" onclick="deleteLogEntry('${r.id}')" title="Delete">✕</button></td>
+    </tr>`;
+  }).join('');
+  updateTabCounts();
+}
+
+function getAddlAuth(cid, code) {
+  return authLog.filter(e => e.cid == cid && e.code.trim() === code.trim() && e.result === 'Authorized')
+    .reduce((sum, e) => sum + (Number(e.addlUnits) || 0), 0);
+}
+function getAuthHistory(cid, code) { return authLog.filter(e => e.cid == cid && e.code.trim() === code.trim()); }
+
+// ═══════════════════════════════════════════════════════════════════
+//  PANEL 3: DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+function handleCSV(input, company) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = parseCSV(e.target.result);
+      importRows(rows, company);
+      const statusEl = document.getElementById('import-' + company.toLowerCase());
+      if (statusEl) statusEl.textContent = 'Imported ' + new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      toast(`Imported ${rows.length} rows for ${company} from ${file.name}`, 'ok');
+    } catch(err) { toast('CSV error: ' + err.message, 'err'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error('Empty file');
+  const headers = splitLine(lines[0]);
+  return lines.slice(1).map(l => {
+    const v = splitLine(l); const o = {};
+    headers.forEach((h,i) => o[h.trim()] = (v[i]||'').trim());
+    return o;
+  }).filter(r => r['CID']);
+}
+function splitLine(line) {
+  const r=[]; let cur='', q=false;
+  for (let i=0;i<line.length;i++) { const c=line[i]; if(c==='"') q=!q; else if(c===','&&!q){r.push(cur);cur='';} else cur+=c; }
+  r.push(cur); return r;
+}
+
+function importRows(rows, company) {
+  const agg = {};
+  rows.forEach(r => {
+    // Skip payments/credits — only include lines with charges
+    const credits = parseFloat(r['Credits']) || 0;
+    const charges = parseFloat(r['Charges']) || 0;
+    if (credits || !charges) return;
+    const cid=r['CID'], csvCode=(r['Item/Code']||'').trim(), desc=(r['Item/Code Description']||'').trim();
+    const units=parseFloat(r['Units'])||0, payer=r['Primary Payer']||'', fn=r['FNAME']||'', ln=r['LNAME']||'';
+    const location=(r['TAGS']||'').trim();
+    if (!cid||!csvCode) return;
+    // Map CSV code to billing code via prefix match
+    const def = findDefault(csvCode);
+    const code = def ? def.code : csvCode;
+    const codeDesc = def ? def.desc : desc;
+    const key = company+'|'+cid+'|'+code;
+    if (!agg[key]) agg[key] = {cid,fname:fn,lname:ln,code,codeDesc,payer,location,company,units_used:0};
+    agg[key].units_used += units;
+    if (!agg[key].payer && payer) agg[key].payer = payer;
+    if (!agg[key].location && location) agg[key].location = location;
+  });
+  Object.entries(agg).forEach(([key,v]) => {
+    if (patients[key]) { patients[key].units_used = v.units_used; }
+    else patients[key] = v;
+  });
+  populateDashFilters();
+  renderDash();
+  updateTabCounts();
+  pushDashboard();
+}
+
+function populateDashFilters() {
+  const codes = [...new Set(Object.values(patients).map(p=>p.code))].sort();
+  const sel = document.getElementById('code-filter-select');
+  sel.innerHTML = '<option value="">All Codes</option>' +
+    codes.map(c => {
+      const def = codeDefaults.find(d => d.code===c);
+      const label = def ? `${c} — ${def.desc}` : c;
+      return `<option value="${c}" ${activeCodeFilter===c?'selected':''}>${label}</option>`;
+    }).join('');
+
+  const locations = [...new Set(Object.values(patients).map(p=>p.location).filter(Boolean))].sort();
+  const locSel = document.getElementById('location-filter-select');
+  locSel.innerHTML = '<option value="">All Locations</option>' +
+    locations.map(l => `<option value="${l}" ${activeLocationFilter===l?'selected':''}>${l}</option>`).join('');
+  const payers = [...new Set(Object.values(patients).map(p=>p.payer).filter(Boolean))].sort();
+  const paySel = document.getElementById('payer-filter-select');
+  paySel.innerHTML = '<option value="">All Payers</option>' +
+    payers.map(p => `<option value="${p}" ${activePayerFilter===p?'selected':''}>${p}</option>`).join('');
+}
+
+function setCodeFilter(code) {
+  activeCodeFilter = code;
+  renderDash();
+}
+
+function setCompanyFilter(company) {
+  activeCompanyFilter = company;
+  document.querySelectorAll('[data-company]').forEach(b => b.className = 'fbtn');
+  const allBtn = document.querySelector('.filter-group [onclick="setCompanyFilter(\'\')"]');
+  if (!company) { allBtn.className = 'fbtn active'; }
+  else {
+    allBtn.className = 'fbtn';
+    const active = document.querySelector(`[data-company="${company}"]`);
+    if (active) active.className = 'fbtn active';
+  }
+  renderDash();
+}
+
+function setLocationFilter(loc) {
+  activeLocationFilter = loc;
+  renderDash();
+}
+
+function setPayerFilter(payer) {
+  activePayerFilter = payer;
+  renderDash();
+}
+
+function setStatusFilter(status) {
+  activeStatusFilter = status;
+  // Update status button active states
+  document.querySelectorAll('[data-status]').forEach(b => b.className = 'fbtn');
+  const allBtn = document.querySelector('.filter-group [onclick="setStatusFilter(\'\')"]');
+  if (!status) { allBtn.className = 'fbtn active'; }
+  else {
+    allBtn.className = 'fbtn';
+    const cls = status==='ok'?'active-ok':status==='warn'?'active-warn':status==='over'?'active-over':'active-dim';
+    const active = document.querySelector(`[data-status="${status}"]`);
+    if (active) active.className = 'fbtn ' + cls;
+  }
+  renderDash();
+}
+
+function getRowStatus(used, total) {
+  if (!total) return 'noauth';
+  const pct = used/total;
+  if (pct>1) return 'over';
+  if (pct>=0.76) return 'warn';
+  return 'ok';
+}
+
+function getFilteredRows() {
+  const search = (document.getElementById('dash-search').value||'').toLowerCase();
+  const fCode = activeCodeFilter;
+  const fStat = activeStatusFilter;
+
+  let rows = Object.entries(patients).map(([key,p]) => {
+    const init = getDefaultUnits(p.code);
+    const addl = getAddlAuth(p.cid, p.code);
+    const prior = getPriorUnitsFor(p.cid, p.code);
+    const total = init + addl;
+    const totalUsed = (Number(p.units_used)||0) + prior;
+    const used = Number(p.units_used)||0;
+    const remaining = total ? total - totalUsed : null;
+    const pct = total ? totalUsed/total : 0;
+    const st = getRowStatus(used, total);
+    const hist = getAuthHistory(p.cid, p.code);
+    return { key, ...p, init, addl, prior, total, totalUsed, used, remaining, pct, st, hist };
+  });
+
+  if (fCode) rows = rows.filter(r => r.code===fCode);
+  if (fStat) rows = rows.filter(r => r.st===fStat);
+  if (activeCompanyFilter) rows = rows.filter(r => r.company===activeCompanyFilter);
+  if (activeLocationFilter) rows = rows.filter(r => r.location===activeLocationFilter);
+  if (activePayerFilter) rows = rows.filter(r => r.payer===activePayerFilter);
+  if (search) rows = rows.filter(r => `${r.fname} ${r.lname} ${r.cid} ${r.code} ${r.company||''} ${r.location||''}`.toLowerCase().includes(search));
+
+  rows.sort((a,b) => {
+    let av=a[dSortCol], bv=b[dSortCol];
+    if (dSortCol==='remaining') { av=a.remaining??-9999; bv=b.remaining??-9999; }
+    if (typeof av==='string') av=av.toLowerCase();
+    if (typeof bv==='string') bv=bv.toLowerCase();
+    return av<bv?-dSortDir:av>bv?dSortDir:0;
+  });
+
+  return rows;
+}
+
+function renderDash() {
+  const rows = getFilteredRows();
+
+  // KPI tiles
+  const all = Object.entries(patients).map(([k,p]) => {
+    const init=getDefaultUnits(p.code), addl=getAddlAuth(p.cid,p.code), prior=getPriorUnitsFor(p.cid,p.code), total=init+addl;
+    return getRowStatus((Number(p.units_used)||0)+prior, total);
+  });
+  document.getElementById('t-pat').textContent = new Set(Object.values(patients).map(p=>p.cid)).size || '—';
+  document.getElementById('t-codes').textContent = new Set(Object.values(patients).map(p=>p.code)).size || '—';
+  document.getElementById('t-over').textContent = all.filter(s=>s==='over').length;
+  document.getElementById('t-warn').textContent = all.filter(s=>s==='warn').length;
+  document.getElementById('t-noauth').textContent = all.filter(s=>s==='noauth').length;
+
+  const tb = document.getElementById('dash-body');
+  if (rows.length===0) {
+    tb.innerHTML = '<tr><td colspan="14"><div class="empty"><div class="icon">📊</div>No matching records.</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(r => {
+    const fCls = r.st==='over'?'f-over':r.st==='warn'?'f-warn':'f-ok';
+    const cCls = r.st==='over'?'c-over':r.st==='warn'?'c-warn':r.st==='ok'?'c-ok':'c-dim';
+    const pctDisp = r.total ? Math.round(r.pct*100) : 0;
+    const barW = r.total ? Math.min(r.pct,1.5)*100 : 0;
+    const pillCls = r.code.includes('HQ')||r.codeDesc.toLowerCase().includes('group')?'pill-group':'pill-indiv';
+    let histHTML = '<span style="color:#A699B8">—</span>';
+    if (r.hist.length) {
+      histHTML = r.hist.map(h => {
+        const bCls = h.result==='Authorized'?'badge-ok':h.result==='Pending'?'badge-pending':'badge-denied';
+        const u = h.result==='Authorized' ? ' (+'+h.addlUnits+')' : '';
+        return `<span class="badge ${bCls}" title="${h.employee} on ${h.date}${h.notes?' — '+h.notes:''}">${h.result.substring(0,5)}${u}</span>`;
+      }).join(' ');
+    }
+    return `<tr>
+      <td><span class="patient-name">${esc(r.lname)}, ${esc(r.fname)}</span><div class="cid-tag">${r.cid}</div></td>
+      <td style="font-size:12px;color:#6B5F80">${esc(r.location)||'—'}</td>
+      <td style="font-size:12px;font-weight:500;color:#52307C">${esc(r.company)||'—'}</td>
+      <td><span class="code-pill ${pillCls}">${esc(r.code)}</span></td>
+      <td style="font-size:12px;color:#6B5F80">${esc(r.payer)||'—'}</td>
+      <td class="r num" style="color:#6B5F80">${r.prior||'<span class="c-dim">—</span>'}</td>
+      <td class="r num">${r.used}</td>
+      <td class="r num">${r.init||'<span class="c-dim">—</span>'}</td>
+      <td class="r num">${r.addl||'<span class="c-dim">—</span>'}</td>
+      <td class="r num" style="font-weight:700">${r.total||'<span class="c-dim">—</span>'}</td>
+      <td><div class="prog"><div class="prog-bar"><div class="prog-fill ${fCls}" style="width:${barW.toFixed(1)}%"></div></div><span class="prog-pct ${cCls}">${r.total?pctDisp+'%':'—'}</span></div></td>
+      <td class="r num ${cCls}" style="font-weight:700">${r.remaining!==null?(r.remaining<0?'<span class="c-over">'+r.remaining+'</span>':r.remaining):'—'}</td>
+      <td style="font-size:11px">${histHTML}</td>
+    </tr>`;
+  }).join('');
+}
+
+function dashSort(col) {
+  if (dSortCol===col) dSortDir*=-1; else { dSortCol=col; dSortDir=1; }
+  renderDash();
+}
+
+function exportDashboard() {
+  const rows = getFilteredRows();
+  if (!rows.length) { toast('No data to export.', 'warn'); return; }
+
+  const data = rows.map(r => ({
+    'Last Name': r.lname,
+    'First Name': r.fname,
+    'CID': r.cid,
+    'Location': r.location || '',
+    'Company': r.company || '',
+    'Billing Code': r.code,
+    'Description': r.codeDesc,
+    'Payer': r.payer || '',
+    'Prior Units': r.prior || '',
+    'Units Used': r.used,
+    'Initial Auth': r.init || '',
+    'Add\'l Auth': r.addl || '',
+    'Total Auth': r.total || '',
+    '% Used': r.total ? Math.round(r.pct * 100) : '',
+    'Remaining': r.remaining !== null ? r.remaining : '',
+    'Status': r.st === 'over' ? 'Over Limit' : r.st === 'warn' ? 'Warning' : r.st === 'ok' ? 'OK' : 'No Auth Set'
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:15},{wch:14},{wch:7},{wch:16},{wch:14},{wch:12},{wch:18},{wch:16},{wch:10},
+    {wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:12}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Dashboard');
+
+  // Build filename with filter context
+  let fname = 'Claims_Dashboard';
+  if (activeCodeFilter) fname += '_' + activeCodeFilter.replace(/\s+/g,'_');
+  if (activeCompanyFilter) fname += '_' + activeCompanyFilter.replace(/\s+/g,'_');
+  if (activeLocationFilter) fname += '_' + activeLocationFilter.replace(/\s+/g,'_');
+  if (activePayerFilter) fname += '_' + activePayerFilter.replace(/\s+/g,'_');
+  if (activeStatusFilter) fname += '_' + activeStatusFilter;
+  fname += '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+
+  XLSX.writeFile(wb, fname);
+  toast(`Exported ${rows.length} rows to Excel`, 'ok');
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  PRIOR UNITS
+// ═══════════════════════════════════════════════════════════════════
+function getPriorUnitsFor(cid, code) {
+  return priorUnits.filter(e => e.cid == cid && e.code.trim() === code.trim())
+    .reduce((sum, e) => sum + (Number(e.prior) || 0), 0);
+}
+
+function populatePriorFormSelects() {
+  const pSel = document.getElementById('pu-patient');
+  const cSel = document.getElementById('pu-code');
+  const pts = {};
+  Object.values(patients).forEach(p => {
+    const label = p.lname+', '+p.fname+' ('+p.cid+') — '+p.company;
+    pts[p.company+'|'+p.cid] = { cid:p.cid, label, company:p.company, location:p.location, payer:p.payer };
+  });
+  pSel.innerHTML = '<option value="">Select…</option>' +
+    Object.entries(pts).sort((a,b) => a[1].label.localeCompare(b[1].label)).map(([k,v]) =>
+      `<option value="${k}">${v.label}</option>`).join('');
+  const codes = [...new Set(Object.values(patients).map(p => p.code))].sort();
+  cSel.innerHTML = '<option value="">Select…</option>' +
+    codes.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function addPriorUnit() {
+  const ptKey = document.getElementById('pu-patient').value;
+  const code = document.getElementById('pu-code').value;
+  const units = Number(document.getElementById('pu-units').value) || 0;
+  if (!ptKey || !code || !units) { toast('Fill in patient, code, and units.', 'warn'); return; }
+  const [company, cid] = ptKey.split('|');
+  const pt = Object.values(patients).find(p => p.cid == cid && p.company === company);
+  const pName = pt ? pt.lname+', '+pt.fname : 'CID '+cid;
+  const entry = { id: Date.now()+'-'+Math.random().toString(36).substr(2,5),
+    cid, patientName: pName, company: company, location: pt?pt.location:'', code, payer: pt?pt.payer:'', prior: units };
+  priorUnits.push(entry);
+  document.getElementById('pu-units').value = '';
+  renderPriorUnits();
+  autoSavePriorUnit(entry);
+  toast(`Prior units logged for ${pName}`, 'ok');
+}
+
+function deletePriorUnit(id) {
+  priorUnits = priorUnits.filter(e => e.id !== id);
+  renderPriorUnits();
+  deletePriorFromSheet(id);
+}
+
+function renderPriorUnits() {
+  const search = (document.getElementById('pu-search').value||'').toLowerCase();
+  let rows = priorUnits.slice().reverse();
+  if (search) rows = rows.filter(r => (r.patientName+' '+r.company+' '+r.location+' '+r.code).toLowerCase().includes(search));
+  const tb = document.getElementById('prior-body');
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="icon">📦</div>No prior units logged yet.</div></td></tr>';
+    updateTabCounts(); return;
+  }
+  tb.innerHTML = rows.map(r => `<tr>
+    <td><span class="patient-name">${esc(r.patientName)}</span><div class="cid-tag">${r.cid}</div></td>
+    <td style="font-size:12px;color:#52307C">${esc(r.company)}</td>
+    <td style="font-size:12px;color:#6B5F80">${esc(r.location)}</td>
+    <td><span class="code-pill pill-indiv">${esc(r.code)}</span></td>
+    <td style="font-size:12px;color:#6B5F80">${esc(r.payer)}</td>
+    <td class="r num">${r.prior}</td>
+    <td><button class="btn btn-ghost-dark btn-sm" style="color:#C0392B" onclick="deletePriorUnit('${r.id}')">✕</button></td>
+  </tr>`).join('');
+  updateTabCounts();
+}
+
+async function autoSavePriorUnit(entry) {
+  const url = getUrl(); if (!url) return;
+  setSaveStatus('prior-save', 'saving');
+  try {
+    const r = await fetch(url, { method:'POST', body: JSON.stringify({ action:'appendPriorUnit', entry }) });
+    const d = await r.json();
+    if (d.ok) { setSaveStatus('prior-save', 'saved'); }
+    else { setSaveStatus('prior-save', 'error'); }
+  } catch(e) { setSaveStatus('prior-save', 'error'); }
+}
+
+async function deletePriorFromSheet(id) {
+  const url = getUrl(); if (!url) return;
+  setSaveStatus('prior-save', 'saving');
+  try {
+    const r = await fetch(url, { method:'POST', body: JSON.stringify({ action:'deletePriorUnit', id: String(id) }) });
+    const d = await r.json();
+    if (d.ok) { setSaveStatus('prior-save', 'saved'); }
+    else { setSaveStatus('prior-save', 'error'); }
+  } catch(e) { setSaveStatus('prior-save', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SHEET SYNC
+// ═══════════════════════════════════════════════════════════════════
+// ▼▼▼ PASTE YOUR DEPLOYED APPS SCRIPT URL HERE ▼▼▼
+const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbxiF0o6E4uKld9Sp1PajepyYfSRXSOE-6slLxv0IfmBziHy61hiLBlAGPvk0r1Gz5VgWA/exec';
+// ▲▲▲ Once set, billers don't need Admin access ▲▲▲
+
+function saveConfig() { localStorage.setItem('cut_url', document.getElementById('script-url').value.trim()); }
+function loadConfig() {
+  const stored = localStorage.getItem('cut_url') || '';
+  const url = HARDCODED_URL || stored;
+  document.getElementById('script-url').value = url;
+}
+function getUrl() { return HARDCODED_URL || document.getElementById('script-url').value.trim(); }
+
+async function testConnection() {
+  const url = getUrl(); if (!url) { toast('Enter your Apps Script URL.','warn'); return; }
+  setConn('testing');
+  try {
+    const r = await fetch(url+'?action=ping'); const d = await r.json();
+    if (d.ok) { connected=true; setConn('on'); toast('Connected!','ok'); }
+    else { setConn('off'); toast('Failed: '+(d.error||'unknown'),'err'); }
+  } catch(e) { setConn('off'); toast('Could not reach script.','err'); }
+}
+function setConn(s) {
+  const d=document.getElementById('conn-dot'), t=document.getElementById('conn-text');
+  if (s==='on') { d.classList.add('on'); t.textContent='Connected'; }
+  else if (s==='testing') { d.classList.remove('on'); t.textContent='Testing…'; }
+  else { d.classList.remove('on'); t.textContent='Not connected'; }
+}
+
+async function pushDashboard() {
+  const url = getUrl(); if (!url) return;
+  try {
+    const now = new Date().toLocaleString('en-US',{timeZone:'America/New_York'});
+    const dashRows = Object.entries(patients).map(([key,p]) => {
+      const init=getDefaultUnits(p.code), addl=getAddlAuth(p.cid,p.code), prior=getPriorUnitsFor(p.cid,p.code), total=init+addl;
+      const used=Number(p.units_used)||0, totalUsed=used+prior, rem=total?total-totalUsed:null, pct=total?Math.round(totalUsed/total*100):0;
+      return { key, cid:p.cid, fname:p.fname, lname:p.lname, code:p.code, codeDesc:p.codeDesc, payer:p.payer, location:p.location||'', company:p.company||'',
+               units_used:used, initialAuth:init, addlAuth:addl, totalAuth:total, remaining:rem, pctUsed:pct, lastUpdated:now };
+    });
+    await fetch(url, { method:'POST', body: JSON.stringify({ action:'pushDashboard', rows: dashRows }) });
+  } catch(e) { /* silent — dashboard push is supplemental */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  AUTO-SAVE (debounced for defaults, immediate for auth log)
+// ═══════════════════════════════════════════════════════════════════
+let _defSaveTimer;
+function autoSaveDefaults() {
+  clearTimeout(_defSaveTimer);
+  setSaveStatus('defaults-save', 'pending');
+  _defSaveTimer = setTimeout(() => pushDefaults(), 800);
+}
+
+async function pushDefaults() {
+  const url = getUrl();
+  if (!url) { setSaveStatus('defaults-save', ''); return; }
+  setSaveStatus('defaults-save', 'saving');
+  try {
+    const r = await fetch(url, { method:'POST', body: JSON.stringify({ action:'pushDefaults', rows: codeDefaults }) });
+    const d = await r.json();
+    if (d.ok) { setSaveStatus('defaults-save', 'saved'); }
+    else { setSaveStatus('defaults-save', 'error'); }
+  } catch(e) { setSaveStatus('defaults-save', 'error'); }
+}
+
+async function autoSaveAuthLog(entry) {
+  const url = getUrl();
+  if (!url) return;
+  setSaveStatus('authlog-save', 'saving');
+  try {
+    const r = await fetch(url, { method:'POST', body: JSON.stringify({ action:'appendAuthEntry', entry }) });
+    const d = await r.json();
+    if (d.ok) {
+      setSaveStatus('authlog-save', 'saved');
+      await pullAuthLogOnly();  // refresh from sheet so both billers stay in sync
+    } else { setSaveStatus('authlog-save', 'error'); }
+  } catch(e) { setSaveStatus('authlog-save', 'error'); }
+}
+
+async function deleteAuthFromSheet(id) {
+  const url = getUrl();
+  if (!url) return;
+  setSaveStatus('authlog-save', 'saving');
+  try {
+    const r = await fetch(url, { method:'POST', body: JSON.stringify({ action:'deleteAuthEntry', id: String(id) }) });
+    const d = await r.json();
+    if (d.ok) {
+      setSaveStatus('authlog-save', 'saved');
+      await pullAuthLogOnly();
+    } else { setSaveStatus('authlog-save', 'error'); }
+  } catch(e) { setSaveStatus('authlog-save', 'error'); }
+}
+
+async function pullAuthLogOnly() {
+  const url = getUrl();
+  if (!url) return;
+  try {
+    const r = await fetch(url+'?action=pullAuthLog');
+    const d = await r.json();
+    if (d.ok) {
+      authLog = d.rows.map(r => ({ id: r.id||(''+Date.now()), cid: r.cid||'', patientName: r.patientName||'', code: r.code||'',
+        payer: r.payer||'', employee: r.employee||'', date: r.date||'', result: r.result||'', addlUnits: Number(r.addlUnits)||0, authNum: r.authNum||'', notes: r.notes||'' }));
+      renderAuthLog();
+      updateTabCounts();
+    }
+  } catch(e) { /* silent */ }
+}
+
+let _saveStatusTimers = {};
+function setSaveStatus(elId, state) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  clearTimeout(_saveStatusTimers[elId]);
+  if (state === 'pending')  { el.className='save-status'; el.innerHTML='<span class="spinner"></span> Unsaved'; }
+  else if (state === 'saving')  { el.className='save-status saving'; el.innerHTML='<span class="spinner"></span> Saving…'; }
+  else if (state === 'saved')   { el.className='save-status saved'; el.innerHTML='✓ Saved'; _saveStatusTimers[elId] = setTimeout(()=>{el.innerHTML='';}, 3000); }
+  else if (state === 'error')   { el.className='save-status error'; el.innerHTML='✕ Save failed'; _saveStatusTimers[elId] = setTimeout(()=>{el.innerHTML='';}, 5000); }
+  else { el.innerHTML=''; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function copyScript() { navigator.clipboard.writeText(GAS_CODE).then(()=>toast('Script copied!','ok')); }
+
+let _tt;
+function toast(msg,type='ok') {
+  const el=document.getElementById('toast');
+  const ic = type==='ok'?'✓':type==='warn'?'⚠':'✕';
+  el.innerHTML=`<span>${ic}</span><span>${msg}</span>`;
+  el.className = 't-'+type+' show';
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+// Fallback code defaults (used only if sheet has no data yet)
+const FALLBACK_DEFAULTS = [
+  { id: 'def-1', code: 'H2019',    alias: '',                 desc: 'TBS Individual',     initialUnits: 200, period: '7/1/26–6/30/27', notes: 'Combined 200 units w/ H2017 (TBS or PSR)' },
+  { id: 'def-2', code: 'H2019 HQ', alias: '',                 desc: 'TBS Group',          initialUnits: 120, period: '7/1/26–6/30/27', notes: '' },
+  { id: 'def-3', code: 'H2020',    alias: 'TBS',              desc: 'TBS Day Treatment',  initialUnits: 30,  period: '7/1/26–6/30/27', notes: 'Auth required after 30 units' },
+  { id: 'def-4', code: 'H0036',    alias: 'CPST Individual',  desc: 'CPST Individual',    initialUnits: 200, period: '7/1/26–6/30/27', notes: '' },
+  { id: 'def-5', code: 'H0036 HQ', alias: 'CPST Group',       desc: 'CPST Group',         initialUnits: 120, period: '7/1/26–6/30/27', notes: '' },
+  { id: 'def-6', code: 'H2017',    alias: '',                 desc: 'Psychosocial Rehab', initialUnits: 200, period: '7/1/26–6/30/27', notes: 'Combined 200 units w/ H2019 (TBS or PSR)' },
+];
+
+codeDefaults = FALLBACK_DEFAULTS.slice();
+
+loadConfig();
+renderDefaults();
+renderAuthLog();
+renderPriorUnits();
+
+// Auto-connect and pull from sheet on load
+(async function autoStart() {
+  const url = getUrl();
+  if (!url) return;
+  setConn('testing');
+  try {
+    const r = await fetch(url+'?action=ping');
+    const d = await r.json();
+    if (!d.ok) { setConn('off'); return; }
+    connected = true;
+    setConn('on');
+
+    // Pull code defaults (replace fallbacks if sheet has data)
+    let res = await fetch(url+'?action=pullDefaults');
+    let data = await res.json();
+    if (data.ok && data.rows.length) {
+      codeDefaults = data.rows.map(r => ({ id: r.id||('def-'+Date.now()), code: r.code||'', alias: r.alias||'', desc: r.desc||'',
+        initialUnits: r.initialUnits||'', period: r.period||'', notes: r.notes||'' }));
+      renderDefaults();
+    }
+
+    // Pull auth log
+    res = await fetch(url+'?action=pullAuthLog');
+    data = await res.json();
+    if (data.ok && data.rows.length) {
+      authLog = data.rows.map(r => ({ id: r.id||(''+Date.now()), cid: r.cid||'', patientName: r.patientName||'', code: r.code||'',
+        payer: r.payer||'', employee: r.employee||'', date: r.date||'', result: r.result||'', addlUnits: Number(r.addlUnits)||0, authNum: r.authNum||'', notes: r.notes||'' }));
+      renderAuthLog();
+    }
+
+    // Pull prior units
+    res = await fetch(url+'?action=pullPriorUnits');
+    data = await res.json();
+    if (data.ok && data.rows.length) {
+      priorUnits = data.rows.map(r => ({ id: r.id||(''+Date.now()), cid: r.cid||'', patientName: r.patientName||'',
+        company: r.company||'', location: r.location||'', code: r.code||'', payer: r.payer||'', prior: Number(r.prior)||0 }));
+      renderPriorUnits();
+    }
+
+    // Pull dashboard patient data
+    res = await fetch(url+'?action=pullDashboard');
+    data = await res.json();
+    if (data.ok && data.rows.length) {
+      data.rows.forEach(row => {
+        const key = row.key;
+        if (!patients[key]) {
+          patients[key] = { cid:row.cid, fname:row.fname, lname:row.lname, code:row.code,
+                           codeDesc:row.codeDesc, payer:row.payer, location:row.location||'', company:row.company||'', units_used:Number(row.units_used)||0 };
+        }
+      });
+      populateDashFilters();
+      renderDash();
+    }
+
+    updateTabCounts();
+  } catch(e) { setConn('off'); }
+})();
+</script>
+</body>
+</html>
