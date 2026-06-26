@@ -189,6 +189,9 @@
   <div class="tab" data-tab="priorunits" onclick="switchTab('priorunits')">
     Prior Units <span class="tab-count" id="tc-prior">0</span>
   </div>
+  <div class="tab" data-tab="ops" onclick="switchTab('ops')">
+    Operations
+  </div>
   <div style="flex:1"></div>
   <div class="tab" data-tab="admin" onclick="switchTab('admin')" style="opacity:.7">
     ⚙ Admin
@@ -230,6 +233,100 @@
         </tr></thead>
         <tbody id="prior-body">
           <tr><td colspan="7"><div class="empty"><div class="icon">📦</div>No prior units logged yet.</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PANEL: OPERATIONS                                              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-ops">
+  <div class="wrap">
+    <div class="toolbar" style="gap:14px;margin-bottom:6px">
+      <div class="filter-group">
+        <span class="filter-group-label">Company</span>
+        <button class="fbtn active" data-opsco="" onclick="setOpsCompany('')">All</button>
+        <button class="fbtn" data-opsco="Brookfield" onclick="setOpsCompany('Brookfield')">Brookfield</button>
+        <button class="fbtn" data-opsco="Castlereagh" onclick="setOpsCompany('Castlereagh')">Castlereagh</button>
+        <button class="fbtn" data-opsco="Balance" onclick="setOpsCompany('Balance')">Balance</button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn btn-secondary btn-sm" onclick="exportOps()">⬇ Export Summary</button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row" id="ops-kpis">
+      <div class="kpi"><div class="kpi-label">Total Patients</div><div class="kpi-val" id="ok-pat">—</div></div>
+      <div class="kpi danger"><div class="kpi-label">Over Limit</div><div class="kpi-val" id="ok-over">0</div></div>
+      <div class="kpi amber"><div class="kpi-label">Warning Zone</div><div class="kpi-val" id="ok-warn">0</div></div>
+      <div class="kpi lav"><div class="kpi-label">Pending Auths</div><div class="kpi-val" id="ok-pending">0</div></div>
+      <div class="kpi sage"><div class="kpi-label">Auth Success Rate</div><div class="kpi-val" id="ok-success">—</div></div>
+      <div class="kpi"><div class="kpi-label">Avg Days to Decision</div><div class="kpi-val" id="ok-turnaround">—</div></div>
+    </div>
+
+    <!-- Two-column layout -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+      <!-- Action List -->
+      <div class="card">
+        <div class="card-hdr">Patients Approaching Limit — No Auth in Progress</div>
+        <div style="overflow-y:auto;max-height:420px">
+          <table>
+            <thead><tr>
+              <th>Patient</th><th>Location</th><th>Code</th><th class="r">Used</th><th class="r">Auth</th><th class="r">Remaining</th><th class="r">% Used</th>
+            </tr></thead>
+            <tbody id="ops-action-body">
+              <tr><td colspan="7"><div class="empty">No data yet</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Auth Pipeline -->
+      <div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-hdr">Authorization Pipeline</div>
+          <div style="padding:16px 18px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+              <div><div style="font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Authorized</div><div style="font-size:28px;font-weight:700;color:#3D6B5E" id="ok-auth-yes">0</div></div>
+              <div><div style="font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Denied</div><div style="font-size:28px;font-weight:700;color:#C0392B" id="ok-auth-no">0</div></div>
+              <div><div style="font-size:10px;font-weight:700;color:#A699B8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Pending</div><div style="font-size:28px;font-weight:700;color:#B07D2A" id="ok-auth-pend">0</div></div>
+            </div>
+            <div style="margin-top:14px">
+              <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#F3F0F7">
+                <div id="ok-bar-yes" style="background:#3D6B5E;transition:width .3s"></div>
+                <div id="ok-bar-no" style="background:#C0392B;transition:width .3s"></div>
+                <div id="ok-bar-pend" style="background:#B07D2A;transition:width .3s"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Auth Activity -->
+        <div class="card">
+          <div class="card-hdr">Recent Authorization Activity</div>
+          <div style="overflow-y:auto;max-height:220px">
+            <table>
+              <thead><tr><th>Patient</th><th>Code</th><th>Result</th><th>Date</th></tr></thead>
+              <tbody id="ops-recent-body">
+                <tr><td colspan="4"><div class="empty">No activity</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Breakdown -->
+    <div class="card">
+      <div class="card-hdr">Location Summary</div>
+      <table>
+        <thead><tr>
+          <th>Location</th><th class="r">Patients</th><th class="r">Over Limit</th><th class="r">Warning</th><th class="r">OK</th><th class="r">No Auth</th><th class="r">Pending Auths</th><th style="min-width:120px">Health</th>
+        </tr></thead>
+        <tbody id="ops-location-body">
+          <tr><td colspan="8"><div class="empty">No data yet</div></td></tr>
         </tbody>
       </table>
     </div>
@@ -637,6 +734,7 @@ function switchTab(tab) {
   if (tab==='authlog') populateAuthFormSelects();
   if (tab==='priorunits') populatePriorFormSelects();
   if (tab==='dashboard') renderDash();
+  if (tab==='ops') renderOps();
 }
 
 function updateTabCounts() {
@@ -1112,6 +1210,198 @@ function exportDashboard() {
   toast(`Exported ${rows.length} rows to Excel`, 'ok');
 }
 
+
+// ═══════════════════════════════════════════════════════════════════
+//  OPERATIONS TAB
+// ═══════════════════════════════════════════════════════════════════
+let opsCompany = '';
+
+function setOpsCompany(company) {
+  opsCompany = company;
+  document.querySelectorAll('[data-opsco]').forEach(b => b.className = 'fbtn');
+  const active = company ? document.querySelector(`[data-opsco="${company}"]`) : document.querySelector('[data-opsco=""]');
+  if (active) active.className = 'fbtn active';
+  renderOps();
+}
+
+function renderOps() {
+  // Build all rows using same logic as dashboard
+  let allRows = Object.entries(patients).map(([key,p]) => {
+    const init = getDefaultUnits(p.code);
+    const addl = getAddlAuth(p.cid, p.code);
+    const prior = getPriorUnitsFor(p.cid, p.code);
+    const total = init + addl;
+    const used = Number(p.units_used)||0;
+    const totalUsed = used + prior;
+    const remaining = total ? total - totalUsed : null;
+    const pct = total ? totalUsed/total : 0;
+    const st = getRowStatus(totalUsed, total);
+    return { key, ...p, init, addl, prior, total, totalUsed, used, remaining, pct, st };
+  });
+  if (opsCompany) allRows = allRows.filter(r => r.company===opsCompany);
+
+  // Filter auth log by company
+  let logs = authLog.slice();
+  if (opsCompany) {
+    const cids = new Set(allRows.map(r => r.cid));
+    logs = logs.filter(l => cids.has(l.cid));
+  }
+
+  // ── KPIs ──
+  const patientSet = new Set(allRows.map(r => r.cid));
+  const overCount = allRows.filter(r => r.st==='over').length;
+  const warnCount = allRows.filter(r => r.st==='warn').length;
+  const pendingCount = logs.filter(l => l.result==='Pending').length;
+  const authYes = logs.filter(l => l.result==='Authorized').length;
+  const authNo = logs.filter(l => l.result==='Not Authorized').length;
+  const authPend = pendingCount;
+  const totalDecisions = authYes + authNo;
+  const successRate = totalDecisions ? Math.round(authYes/totalDecisions*100) : null;
+
+  document.getElementById('ok-pat').textContent = patientSet.size || '—';
+  document.getElementById('ok-over').textContent = overCount;
+  document.getElementById('ok-warn').textContent = warnCount;
+  document.getElementById('ok-pending').textContent = pendingCount;
+  document.getElementById('ok-success').textContent = successRate !== null ? successRate+'%' : '—';
+
+  // Turnaround: avg days between date filed and most recent edit for resolved entries
+  // (simplified: just show count of decisions)
+  document.getElementById('ok-turnaround').textContent = totalDecisions || '—';
+
+  // ── Auth Pipeline Bar ──
+  document.getElementById('ok-auth-yes').textContent = authYes;
+  document.getElementById('ok-auth-no').textContent = authNo;
+  document.getElementById('ok-auth-pend').textContent = authPend;
+  const totalLogs = authYes+authNo+authPend;
+  document.getElementById('ok-bar-yes').style.width = totalLogs ? (authYes/totalLogs*100)+'%' : '0%';
+  document.getElementById('ok-bar-no').style.width = totalLogs ? (authNo/totalLogs*100)+'%' : '0%';
+  document.getElementById('ok-bar-pend').style.width = totalLogs ? (authPend/totalLogs*100)+'%' : '0%';
+
+  // ── Action List: patients in warning/approaching limit with no pending auth ──
+  const pendingCids = new Set(logs.filter(l => l.result==='Pending').map(l => l.cid+'|'+l.code));
+  let actionRows = allRows
+    .filter(r => r.total > 0 && r.st !== 'noauth')
+    .filter(r => !pendingCids.has(r.cid+'|'+r.code))
+    .sort((a,b) => {
+      if (a.remaining===null) return 1;
+      if (b.remaining===null) return -1;
+      return a.remaining - b.remaining;
+    })
+    .slice(0, 20);
+
+  const actionTb = document.getElementById('ops-action-body');
+  if (!actionRows.length) {
+    actionTb.innerHTML = '<tr><td colspan="7"><div class="empty">No patients approaching limit without auth in progress</div></td></tr>';
+  } else {
+    actionTb.innerHTML = actionRows.map(r => {
+      const cCls = r.st==='over'?'c-over':r.st==='warn'?'c-warn':'c-ok';
+      const pctDisp = r.total ? Math.round(r.pct*100) : 0;
+      return `<tr>
+        <td><span class="patient-name">${esc(r.lname)}, ${esc(r.fname)}</span><div class="cid-tag">${r.cid}</div></td>
+        <td style="font-size:12px;color:#6B5F80">${esc(r.location)||'—'}</td>
+        <td><span class="code-pill pill-indiv">${esc(r.code)}</span></td>
+        <td class="r num">${r.totalUsed}</td>
+        <td class="r num">${r.total}</td>
+        <td class="r num ${cCls}" style="font-weight:700">${r.remaining!==null?r.remaining:'—'}</td>
+        <td class="r num ${cCls}">${pctDisp}%</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Recent Auth Activity ──
+  const recentTb = document.getElementById('ops-recent-body');
+  const recent = logs.slice().reverse().slice(0, 10);
+  if (!recent.length) {
+    recentTb.innerHTML = '<tr><td colspan="4"><div class="empty">No activity</div></td></tr>';
+  } else {
+    recentTb.innerHTML = recent.map(r => {
+      const bCls = r.result==='Authorized'?'badge-ok':r.result==='Pending'?'badge-pending':'badge-denied';
+      return `<tr>
+        <td><span class="patient-name">${esc(r.patientName)}</span></td>
+        <td><span class="code-pill pill-indiv">${esc(r.code)}</span></td>
+        <td><span class="badge ${bCls}">${r.result}</span></td>
+        <td style="font-size:12px;color:#6B5F80">${r.date}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Location Summary ──
+  const locMap = {};
+  allRows.forEach(r => {
+    const loc = r.location || 'Unknown';
+    if (!locMap[loc]) locMap[loc] = { patients: new Set(), over:0, warn:0, ok:0, noauth:0, pending:0 };
+    locMap[loc].patients.add(r.cid);
+    if (r.st==='over') locMap[loc].over++;
+    else if (r.st==='warn') locMap[loc].warn++;
+    else if (r.st==='ok') locMap[loc].ok++;
+    else locMap[loc].noauth++;
+  });
+  // Add pending auths per location
+  logs.filter(l => l.result==='Pending').forEach(l => {
+    const pt = allRows.find(r => r.cid==l.cid);
+    const loc = pt ? (pt.location||'Unknown') : 'Unknown';
+    if (locMap[loc]) locMap[loc].pending++;
+  });
+
+  const locTb = document.getElementById('ops-location-body');
+  const locEntries = Object.entries(locMap).sort((a,b) => a[0].localeCompare(b[0]));
+  if (!locEntries.length) {
+    locTb.innerHTML = '<tr><td colspan="8"><div class="empty">No data yet</div></td></tr>';
+  } else {
+    locTb.innerHTML = locEntries.map(([loc, d]) => {
+      const total = d.over+d.warn+d.ok+d.noauth;
+      const healthPct = total ? ((d.ok+d.noauth)/total*100) : 100;
+      const barColor = healthPct >= 80 ? '#3D6B5E' : healthPct >= 50 ? '#B07D2A' : '#C0392B';
+      return `<tr>
+        <td style="font-weight:500">${esc(loc)}</td>
+        <td class="r num">${d.patients.size}</td>
+        <td class="r num c-over">${d.over||''}</td>
+        <td class="r num c-warn">${d.warn||''}</td>
+        <td class="r num c-ok">${d.ok||''}</td>
+        <td class="r num c-dim">${d.noauth||''}</td>
+        <td class="r num" style="color:#B07D2A">${d.pending||''}</td>
+        <td>
+          <div class="prog">
+            <div class="prog-bar"><div class="prog-fill" style="width:${healthPct.toFixed(0)}%;background:${barColor}"></div></div>
+            <span class="prog-pct" style="color:${barColor}">${healthPct.toFixed(0)}%</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function exportOps() {
+  let allRows = Object.entries(patients).map(([key,p]) => {
+    const init = getDefaultUnits(p.code), addl = getAddlAuth(p.cid,p.code);
+    const prior = getPriorUnitsFor(p.cid,p.code), total = init+addl;
+    const used = Number(p.units_used)||0, totalUsed = used+prior;
+    const remaining = total ? total-totalUsed : null;
+    const pct = total ? totalUsed/total : 0;
+    const st = getRowStatus(totalUsed, total);
+    return { ...p, totalUsed, remaining, pct, st, total };
+  });
+  if (opsCompany) allRows = allRows.filter(r => r.company===opsCompany);
+
+  const data = allRows.sort((a,b) => (a.remaining??9999)-(b.remaining??9999)).map(r => ({
+    'Company': r.company||'', 'Location': r.location||'',
+    'Last Name': r.lname, 'First Name': r.fname, 'CID': r.cid,
+    'Code': r.code, 'Payer': r.payer||'',
+    'Total Used': r.totalUsed, 'Total Auth': r.total||'',
+    'Remaining': r.remaining!==null?r.remaining:'',
+    '% Used': r.total?Math.round(r.pct*100):'',
+    'Status': r.st==='over'?'Over Limit':r.st==='warn'?'Warning':r.st==='ok'?'OK':'No Auth'
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:14},{wch:16},{wch:15},{wch:14},{wch:7},{wch:12},{wch:16},{wch:10},{wch:10},{wch:10},{wch:8},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ops Summary');
+  let fname = 'Ops_Summary';
+  if (opsCompany) fname += '_'+opsCompany;
+  fname += '_'+new Date().toISOString().slice(0,10)+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  toast(`Exported ops summary to Excel`, 'ok');
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  PRIOR UNITS
